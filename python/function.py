@@ -12,17 +12,30 @@ def sigmoid_function(x):
     y = 1/(1 + np.exp(-x))
     return y
 
+#
+def sigmoid_grad_function(x):
+    return (1.0 - sigmoid_function(x)) * sigmoid_function(x)
+
 # 实现ReLU函数
 def relu_function(x):
     return np.maximum(0,x)
 
 # 实现softMax函数 + 防止溢出
+# def softmax_function(x):
+#     c = np.max(x)
+#     exp_x = np.exp(x - c)
+#     sum_exp_x = np.sum(exp_x)
+#     y = exp_x / sum_exp_x
+#     return y
 def softmax_function(x):
-    c = np.max(x)
-    exp_x = np.exp(x - c)
-    sum_exp_x = np.sum(exp_x)
-    y = exp_x / sum_exp_x
-    return y
+    if x.ndim == 2:
+        x = x.T
+        x = x - np.max(x, axis=0)
+        y = np.exp(x) / np.sum(np.exp(x), axis=0)
+        return y.T 
+
+    x = x - np.max(x) # 溢出对策
+    return np.exp(x) / np.sum(np.exp(x))
 
 # 实现均方误差 损失函数
 def mean_squared_error(y,t):
@@ -43,22 +56,24 @@ def numerical_diff(f,x):
     return (f(x + h) - f(x - h)) / (h * 2)
 
 # 实现梯度
-def numerical_gradient(f,x):
-    grad = np.zeros_like(x)
+def numerical_gradient(f, x):
     h = 1e-4
-
-    for i in range(x.size):
-        tmp = x[i]
-        # 
-        x[i] = tmp + h
-        f1 = f(x)
-        #
-        x[i] = tmp - h
-        f2 = f(x)
-
-        grad[i] = (f1 - f2) / (2 * h)
-        x[i] = tmp
-
+    grad = np.zeros_like(x)
+    
+    it = np.nditer(x, flags=['multi_index'], op_flags=['readwrite'])
+    while not it.finished:
+        idx = it.multi_index
+        tmp_val = x[idx]
+        x[idx] = float(tmp_val) + h
+        fxh1 = f(x)  # f(x+h)
+        
+        x[idx] = tmp_val - h 
+        fxh2 = f(x)  # f(x-h)
+        
+        grad[idx] = (fxh1 - fxh2) / (2*h)
+        x[idx] = tmp_val  # 还原值
+        it.iternext()
+        
     return grad
 
 # 梯度法
